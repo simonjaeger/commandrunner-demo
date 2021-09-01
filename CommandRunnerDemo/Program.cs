@@ -1,4 +1,5 @@
-﻿using CommandLine;
+﻿using Azure.Storage.Blobs;
+using CommandLine;
 using Microsoft.Azure.Devices;
 using Microsoft.Azure.Devices.Shared;
 using Serilog;
@@ -25,12 +26,30 @@ namespace CommandRunnerDemo
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(arguments.Command) && !string.IsNullOrWhiteSpace(arguments.File))
+            {
+                Log.Error("Missing command or file to run.");
+                return;
+            }
+
             Log.Information("Initializing.");
             var iotHubConnectionString = Environment.GetEnvironmentVariable("IOT_HUB_CONNECTION_STRING");
+            var blobStorageConnectionString = Environment.GetEnvironmentVariable("BLOB_STORAGE_CONNECTION_STRING");
             var registryManager =  RegistryManager.CreateFromConnectionString(iotHubConnectionString);
+            var blobServiceClient = new BlobServiceClient(blobStorageConnectionString);
             var service = new OSConfigService(registryManager);
+            var storageService = new StorageService(blobServiceClient);
 
             var commandId = Guid.NewGuid().ToString();
+            var command = arguments.Command;
+
+            if (!string.IsNullOrWhiteSpace(arguments.File))
+            {
+                Log.Information("Uploading file.");
+                var uri = await storageService.UploadFile(commandId, arguments.File);
+                command = CommandTemplate.Create(commandId, arguments.File.Split('/', '\\').Last(), uri, arguments.UseDeliveryOptimization);
+            }
+
             Queue<Twin> queue = new();
 
             if (!string.IsNullOrWhiteSpace(arguments.DeviceId))
@@ -44,7 +63,7 @@ namespace CommandRunnerDemo
                 var twins = await service.GetTwins();
                 foreach (var twin in twins)
                 {
-                    await service.UpdateCommandRunner(twin, commandId, arguments.Command);
+                    await service.UpdateCommandRunner(twin, commandId, command);
                     queue.Enqueue(twin);
                 }
             }
