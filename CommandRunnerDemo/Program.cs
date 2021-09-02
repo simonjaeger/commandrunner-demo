@@ -55,7 +55,7 @@ namespace CommandRunnerDemo
             if (!string.IsNullOrWhiteSpace(arguments.DeviceId))
             {
                 var twin = await service.GetTwin(arguments.DeviceId);
-                await service.UpdateCommandRunner(twin, commandId, arguments.Command);
+                await service.UpdateCommandRunner(twin, commandId, command);
                 queue.Enqueue(twin);
             }
             else
