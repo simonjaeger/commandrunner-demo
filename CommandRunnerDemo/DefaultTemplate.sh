@@ -7,7 +7,7 @@ URI="[URI]";
 # Install required tools.
 apt-get -qq install wget >> /dev/null;
 
-# Remove file if already present. Otherwise the delivery optimization agent fails.
+# Remove file if already present.
 rm -f $PTH;
 
 # Download file.
