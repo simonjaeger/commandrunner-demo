@@ -1,4 +1,5 @@
 ﻿using Azure.Storage.Blobs;
+using Azure.Storage.Sas;
 using Serilog;
 using System;
 using System.IO;
@@ -37,8 +38,12 @@ namespace CommandRunnerDemo
             var response = await blobContainerClient.UploadBlobAsync(blobName, fileStream);
 
             var blobClient = blobContainerClient.GetBlobClient(blobName);
-            var uri = blobClient.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTime.UtcNow.AddYears(1));
-            return uri;
+            var blobSasBuilder = new BlobSasBuilder(BlobContainerSasPermissions.Read, DateTime.UtcNow.AddYears(1));
+            blobSasBuilder.Protocol = SasProtocol.HttpsAndHttp;
+            var uri = blobClient.GenerateSasUri(blobSasBuilder);
+            // NOTE: Support for MCC.
+            var newUri = new Uri(uri.AbsoluteUri.Replace("https://", "http://"));
+            return newUri;
         }
     }
 }
